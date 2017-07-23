@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, make_response
+from flask import Flask, render_template, request, redirect, make_response, send_file
 import datetime
 import london_mood
 
@@ -32,6 +32,16 @@ def show_result():
         return render_template('results.html', date=str(app.vars['date']), average_mood=average_mood)
     else:
         return redirect('/index')
+
+
+
+@app.route("/london_mood_1year.png")
+def plot_1():
+    return send_file("london_mood_1year.png", mimetype='image/png')
+
+@app.route("/london_mood_web.png")
+def plot_2():
+    return send_file("london_mood_web.png", mimetype='image/png')
 
 @app.route("/plot_mood.png")
 def plot_mood():
