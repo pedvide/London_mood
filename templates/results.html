@@ -1,11 +1,19 @@
 <!doctype html>
 <title>London mood</title>
-<link rel=stylesheet type=text/css href='{{ url_for('static',filename='style.css')}}'>
+<link rel=stylesheet type=text/css href='{{ url_for('static', filename='style.css')}}'>
 <div class=page>
   <h1>London mood on {{date}}</h1>
   <div class=metanav>
-    <h4>
-      {{mood}}
-    </h4>
+    <h2>
+      {{average_mood}}
+    </h2>
+  </div>
+  <img src="/plot_mood.png" alt="Mood plot" width="500" align="center">
+  <div class=metanav>
+    <form id='backform' method='post' action='results' >
+        <h2>
+        <input type='submit' value='Back' />
+        </h2>
+    </form>
   </div>
 </div>

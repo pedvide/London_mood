@@ -78,7 +78,6 @@ def _get_twitter_mood(continent, city, start_day, end_day, granularity='day'):
     ##2017-01-22    0.486061
 
 
-
 def _get_weather(day):
 
     client = wolframalpha.Client('P7JGX8-GWXE5T2LHR')
@@ -90,8 +89,6 @@ def _get_weather(day):
             for data in weather_pod:
                 weather[data['@title']] = str(data['plaintext'])
             break
-
-    weather_parsed = {}
 
     temp_match = re.search(r'average: (\d*) °C', weather.get('Temperature', ''))
     if temp_match:
@@ -114,6 +111,7 @@ def _get_weather(day):
     else:
         rain = None
 
+    weather_parsed = {}
     weather_parsed['temperature'] = temp
     weather_parsed['wind'] = wind
     weather_parsed['clouds'] = clouds
@@ -121,19 +119,28 @@ def _get_weather(day):
 
     return weather_parsed
 
+def _get_cached_weather(day):
+    weather = pd.read_csv('cached_weather.csv')
+    try:
+        d = weather.loc[weather['day'] == str(day)].to_dict(orient='records')[0]
+    except (IndexError, KeyError):
+        return None
+    for key, value in d.items():
+        if pd.isnull(value):
+            d[key] = None
+    del d['day']
+    return d
+
 
 def _get_news(start_day, end_day):
     guardian_url_base = 'http://content.guardianapis.com/search'
-
     api_key = 'e7f918dc-b450-4bf9-a1d5-d18c9f8e7949'
 
     parameters = {'api-key': api_key,
                   'from-date': start_day, 'to-date': end_day,
                   'q': 'london', 'section': None, 'type': None,
                   'show-fields': 'body'}
-
     news_response = requests.get(guardian_url_base, params=parameters)
-
     if(news_response.ok):
         json_data = news_response.json()['response']
         pages = json_data['pages']
@@ -186,44 +193,90 @@ def is_twitter_happy(day):
     return (int(mood['good']) - int(mood['bad']))/2 + 0.5
 
 def are_news_positive(day):
-    '''Returns a number [-1, 1]'''
+    '''Returns 1.0 for a good day, 0.5 for a meh-day and 0.0 for a bad day'''
     start_day = day
     end_day = day
     news_list = _get_news(start_day, end_day)
     overall_pol, overall_sub = _get_sentiment_textBlob(news_list)
 
-    return overall_pol*overall_sub > 0.02
+    if overall_pol*overall_sub > 0.02:
+        return 1.0
+    elif overall_pol*overall_sub > 0.015:
+        return 0.5
+    else:
+        return 0.0
 
 def is_weather_good(day):
+    '''Returns 1.0 for a good day, 0.5 for a meh-day and 0.0 for a bad day'''
+    # if the day is in between 2016/7/23 and 2017/7/23, use the cache
+    if day >= date(2016, 7, 23) and day <= date(2017, 7, 23):
+        weather = _get_cached_weather(day)
+        if weather is None:  # if missing in cache
+            print('get new weather data')
+            weather = _get_weather(day)
+    else:
+        print('get new weather data')
+        weather = _get_weather(day)
 
-    weather = _get_weather(day)
+    good_temp = weather['temperature'] > 15 if weather['temperature'] else True
+    good_wind = weather['wind'] < 5 if weather['wind'] else True
+    good_clouds = weather['clouds'] < 50 if weather['clouds'] else True
+    good_rain = weather['rain'] < 50 if weather['rain'] else True
 
-    good_temp = weather['temperature'] > 15
-    good_wind = weather['wind'] < 10
-    good_clouds = weather['clouds'] < 20
-    good_rain = weather['rain'] < 20
-
+    if good_temp and good_wind and good_clouds and good_rain:
+        return 1.0
+    elif good_temp and good_wind:
+        return 0.5
+    else:
+        return 0.0
     return good_temp and good_wind and good_clouds and good_rain
 
-#day = date(year=2017, month=5, day=25)
-today = date.today()
-#twitter_lst = []
-#news_lst = []
-weather_lst = []
-days = list(daterange(today-timedelta(days=365), today))
-for day in days:
-    print(day)
+def mood(day):
+    '''Returns a value [1, 0], with 1 as a good day and 0 as a bad one.'''
+    twitter_mood = is_twitter_happy(day)
+    news_mood = are_news_positive(day)
+    weather_mood = is_weather_good(day)
+
+    average_mood = (2*twitter_mood + news_mood + weather_mood)/4
+
+    return average_mood, twitter_mood, news_mood, weather_mood
+
+def avg_mood_text(mood):
+    average_mood = mood[0]
+    if average_mood >= 0.74:
+        mood_str = 'Good'
+    elif average_mood > 0.5:
+        mood_str = 'Meh'
+    else:
+        mood_str = 'Bad'
+
+    return mood_str
+
+
+###### CREATE TOTAL MOOD CACHE ####
+#today = date.today()
+#days = list(daterange(today-timedelta(days=365), today))
+#moods = []
+#for day in days:
+#    print(day)
+#    moods.append(mood(day))
+#df = pd.DataFrame(moods)
+#df.columns = ['average', 'twitter', 'news', 'weather']
+#df['day'] = days
+#df.to_csv('mood_cache.csv')
+
+###### CREATE WEATHER CACHE ####
+#today = date.today()
+#weather_lst = []
+#days = list(daterange(today-timedelta(days=365), today))
+#for day in days:
+#    print(day)
 #    try:
-#        twitter_lst.append(is_twitter_happy(day))
+#        new_data = _get_weather(day)
+#        weather_lst.append(new_data)
+#        print(new_data)
 #    except Exception:
-#        twitter_lst.append(None)
-#    try:
-#        news_lst.append(are_news_positive(day))
-#    except Exception:
-#        news_lst.append(None)
-    try:
-        new_data = _get_weather(day)
-        weather_lst.append(new_data)
-        print(new_data)
-    except Exception:
-        weather_lst.append(None)
+#        weather_lst.append(None)
+#df = pd.DataFrame(weather_lst)
+#df['days'] = days
+#df.to_csv('weather_cache.csv')
