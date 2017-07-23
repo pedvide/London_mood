@@ -1,0 +1,8 @@
+Flask
+gunicorn
+requests
+requests_cache
+pandas
+wolframalpha
+textblob
+nltk

@@ -81,7 +81,7 @@ def _get_twitter_mood(continent, city, start_day, end_day, granularity='day'):
 def _get_weather(day):
 
     client = wolframalpha.Client('P7JGX8-GWXE5T2LHR')
-    res = client.query('weather in London, UK on' + '2017-5-10')
+    res = client.query('weather in London, UK on' + str(day))
     weather = {}
     for pod in res.pods:
         if pod['@title'] == 'Weather history':
@@ -118,7 +118,7 @@ def _get_weather(day):
     weather_parsed['clouds'] = clouds
     weather_parsed['rain'] = rain
 
-    return weather
+    return weather_parsed
 
 
 def _get_news(start_day, end_day):
@@ -221,6 +221,8 @@ for day in days:
 #    except Exception:
 #        news_lst.append(None)
     try:
-        weather_lst.append(_get_weather(day))
+        new_data = _get_weather(day)
+        weather_lst.append(new_data)
+        print(new_data)
     except Exception:
         weather_lst.append(None)
