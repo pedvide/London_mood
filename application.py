@@ -15,6 +15,7 @@ app.nquestions=len(app.questions)
 def main():
     return redirect('/index')
 
+
 @app.route('/index', methods=['GET', 'POST'])
 def first_page():
     nquestions = app.nquestions
@@ -30,13 +31,14 @@ def first_page():
 
         return redirect('/main')
 
+
+
 @app.route('/main')
 def main_func():
     if app.questions:
         return redirect('/next')
     else:
         return render_template('end.html')
-
 
 @app.route('/next', methods=['GET'])
 def next_get_question(): #remember the function name does not need to match the URL
