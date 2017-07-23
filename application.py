@@ -17,12 +17,12 @@ def first_page():
         return render_template('userinfo.html')
     else:
         app.vars['date'] = request.form['date']
-        return redirect('/result')
+        return redirect('/results')
 
 
 @app.route('/results')
 def show_result():
-    return render_template('results.html', mood=mood)
+    return render_template('results.html', date=app.vars['date'], mood=mood)
 
 if __name__ == "__main__":
     app.run()
